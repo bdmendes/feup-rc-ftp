@@ -1,0 +1,30 @@
+{
+    "clang-format.style": "{BasedOnStyle: LLVM, IndentWidth: 4, AllowShortBlocksOnASingleLine: Always, AllowShortCaseLabelsOnASingleLine: true, AllowShortFunctionsOnASingleLine: None, IndentCaseLabels: true, AllowShortIfStatementsOnASingleLine: Always}",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 100,
+    "files.associations": {
+        "*.h": "c",
+        "*.c": "c"
+    },
+    "cpplint.filters": [
+        "-whitespace",
+        "-legal/copyright",
+        "-readability/check",
+        "-build/include_subdir",
+        "-build/header_guard",
+        "-readability/casting",
+        "-runtime/int",
+        "-runtime/threadsafe_fn"
+    ],
+    "cpplint.languages": [
+        "c"
+    ],
+    "files.exclude": {
+        "**/*.o": true
+    },
+    "cpplint.cpplintPath": "/usr/bin/cpplint",
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true
+}
