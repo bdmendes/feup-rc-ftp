@@ -12,7 +12,7 @@ OBJECTS := $(SOURCES:%.c=%.o)
 all: application
 
 application: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(PROG_NAME) $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(PROG_NAME) $(OBJECTS) -lcurl
 
 clean:
 	rm -f $(PROG_NAME) $(OBJECTS)
