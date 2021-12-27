@@ -33,110 +33,99 @@ struct con_info {
  */
 int decode_url(char *url, char *decoded_url, int max_url_length) {
     CURL *curl = curl_easy_init();
-    if (curl) {
-        int decodelen;
-        char *decoded = curl_easy_unescape(curl, url, 0, &decodelen);
-        if (decoded) {
-            strncpy(decoded_url, decoded, max_url_length);
-            curl_free(decoded);
-        }
+    if (!curl) { return -1; }
+    char *decoded = curl_easy_unescape(curl, url, 0, NULL);
+    if (!decoded) {
         curl_easy_cleanup(curl);
-        return 0;
+        return -1;
     }
-    return -1;
+    strncpy(decoded_url, decoded, max_url_length);
+    curl_free(decoded);
+    curl_easy_cleanup(curl);
+    return 0;
 }
 
 int parse_url_con_info(char *url, struct con_info *con_info) {
-    char host[MAX_URL_LENGTH];
-    int delim[] = {0, 0, 0, 0, 0};
-    int delim_c = 0;
+    if (strncmp(url, "ftp://", 6) != 0) {
+        fprintf(stderr, "Missing or unsuported protocol used.\n");
+        return -1;
+    }
 
-    for (size_t i = 0; i < strlen(url); i++) {
-        if (i == 0) {
-            if (strncmp(url, "ftp://", 6) != 0) {
-                // Message about missing or unsupported protocol
-                return -1;
-            } else {
-                delim[0] = 5;
-                delim_c++;
-                i = 5;
-            }
-            continue;
-        }
-
-        if (delim_c < 5) {
-            if (url[i] == ':' || url[i] == '@' ||
-                (url[i] == '/' &&
-                 (url[delim[delim_c - 1]] != '/' || delim_c - 1 == 0))) {
-                delim[delim_c] = i;
-                delim_c++;
-            }
-        } else {
+    int url_start_idx = 0;
+    for (size_t i = 6; i < strlen(url); i++) {
+        if (url[i] == '/') {
+            url_start_idx = i;
             break;
         }
     }
 
-    for (size_t i = 0; i < 5; i++) {
-        if (url[delim[i]] == '/' && i != 0) {
-            char temp_url[MAX_URL_LENGTH];
-            snprintf(temp_url, MAX_URL_LENGTH, "%s%s", host, &url[delim[i]]);
-            if (decode_url(temp_url, temp_url, sizeof temp_url) != 0) {
-                return -1;
-            }
-            snprintf(con_info->addr, sizeof con_info->addr, "%s", temp_url);
-            return 0;
-        }
+    if (url_start_idx == 0) { return -1; }
 
-        if (url[delim[i]] == ':' && url[delim[i + 1]] == '/') {
-            char temp_port[20];
-            snprintf(temp_port, delim[i + 1] - delim[i], "%s",
-                     &url[delim[i] + 1]);
+    char temp_url[MAX_URL_LENGTH];
+    char temp_host[MAX_URL_LENGTH];
+    snprintf(temp_url, url_start_idx - 5, "%s", &url[6]);
 
-            int port = 0;
-            if ((port = atoi(temp_port)) == 0) {
-                return -1;
-            } else {
-                con_info->port = port;
-            }
-        }
+    char *tokens[] = {NULL, NULL, NULL, NULL};
+    int token_c = 0;
+    char *token = strtok(temp_url, "@:");
 
-        if ((url[delim[i]] == '@' || url[delim[i]] == '/') &&
-            url[delim[i + 1]] == '/') {
-            con_info->port = DEFAULT_PORT;
-        }
-
-        if (url[delim[i]] == '@' &&
-            (url[delim[i + 1]] == '/' || url[delim[i + 1]] == ':')) {
-            snprintf(host, delim[i + 1] - delim[i], "%s", &url[delim[i] + 1]);
-            if (strlen(host) == 0) { return -1; }
-        }
-
-        if (url[delim[i]] == '/' &&
-            (url[delim[i + 1]] == '/' || url[delim[i + 1]] == ':')) {
-            snprintf(host, delim[i + 1] - delim[i], "%s", &url[delim[i] + 1]);
-            if (strlen(host) == 0) { return -1; }
-            snprintf(con_info->user, sizeof con_info->user, "%s",
-                     ANONYMOUS_USER);
-            snprintf(con_info->pass, sizeof con_info->pass, "%s",
-                     ANONYMOUS_USER_PASS);
-        }
-
-        if (url[delim[i]] == ':' && url[delim[i + 1]] == '@') {
-            snprintf(con_info->user, delim[i] - delim[i - 1], "%s",
-                     &url[delim[i - 1] + 1]);
-            snprintf(con_info->pass, delim[i + 1] - delim[i], "%s",
-                     &url[delim[i] + 1]);
-        }
-
-        if (url[delim[i]] == '/' && url[delim[i + 1]] == '@') {
-            snprintf(con_info->user, delim[i + 1] - delim[i], "%s",
-                     &url[delim[i] + 1]);
-            if (strlen(con_info->user) == 0) { return -1; }
-            snprintf(con_info->pass, sizeof con_info->pass, "%s",
-                     ANONYMOUS_USER_PASS);
-        }
+    while (token != NULL && token_c < 4) {
+        tokens[token_c++] = token;
+        token = strtok(NULL, "@:");
     }
-    return -1;
+
+    if (token_c < 1) { return -1; }
+
+    snprintf(con_info->user, sizeof con_info->user, "%s", ANONYMOUS_USER);
+    snprintf(con_info->pass, sizeof con_info->pass, "%s", ANONYMOUS_USER_PASS);
+    con_info->port = DEFAULT_PORT;
+    int port = 0;
+
+    switch (token_c) {
+        case 1: snprintf(temp_host, sizeof temp_host, "%s", tokens[0]); break;
+        case 2:
+            port = 0;
+            if ((port = atoi(tokens[1])) != 0) {
+
+                con_info->port = port;
+                snprintf(temp_host, sizeof temp_host, "%s", tokens[0]);
+            } else {
+
+                snprintf(con_info->user, sizeof con_info->user, "%s",
+                         tokens[0]);
+                snprintf(temp_host, sizeof temp_host, "%s", tokens[1]);
+            }
+            break;
+        case 3:
+            port = 0;
+            if ((port = atoi(tokens[2])) != 0) {
+                con_info->port = port;
+                snprintf(temp_host, sizeof temp_host, "%s", tokens[1]);
+            } else {
+                snprintf(con_info->pass, sizeof con_info->pass, "%s",
+                         tokens[1]);
+                snprintf(temp_host, sizeof temp_host, "%s", tokens[2]);
+            }
+            snprintf(con_info->user, sizeof con_info->user, "%s", tokens[0]);
+            break;
+        case 4:
+            port = 0;
+            if ((port = atoi(tokens[3])) == 0) { return -1; }
+            con_info->port = port;
+            snprintf(temp_host, sizeof temp_host, "%s", tokens[1]);
+            snprintf(con_info->user, sizeof con_info->user, "%s", tokens[0]);
+            snprintf(con_info->pass, sizeof con_info->pass, "%s", tokens[1]);
+            snprintf(temp_host, sizeof temp_host, "%s", tokens[2]);
+            break;
+
+        default: break;
+    }
+
+    snprintf(temp_url, sizeof temp_url, "%s%s", temp_host, &url[url_start_idx]);
+    if (decode_url(temp_url, con_info->addr, sizeof con_info->addr) != 0) {
+        return -1;
+    }
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
