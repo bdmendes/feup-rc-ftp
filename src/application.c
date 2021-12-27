@@ -102,7 +102,7 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
 
         if ((url[delim[i]] == '@' || url[delim[i]] == '/') &&
             url[delim[i + 1]] == '/') {
-            con_info->port = 21;
+            con_info->port = DEFAULT_PORT;
         }
 
         if (url[delim[i]] == '@' &&
