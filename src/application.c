@@ -1,5 +1,7 @@
-#include <curl/curl.h>
+
+#include <regex.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +12,9 @@
 #define ANONYMOUS_USER "anonymous"
 #define ANONYMOUS_USER_PASS "1234"
 #define DEFAULT_PORT 21
+#define DEFAULT_RESOURCE "/"
+
+#define URL_CHARS "([[:alnum:]\\$\\.\\+\\*\\(\\),!'_-]+)|(%[[:xdigit:]]{2})"
 
 void print_usage(char *inv) {
     fprintf(stdout,
@@ -24,112 +29,100 @@ struct con_info {
 };
 
 /**
- * @brief Decodes possibly encoded URLs
+ * @brief Verifies an URL is a valid FTP URL
  *
- * @param url URL to decode
- * @param decoded_url Pointer to store the decoded URL
- * @param max_url_length Max decoded URL length
+ * @param url URL to verify
  * @return int 0 in case of success, -1 otherwise
  */
-int decode_url(char *url, char *decoded_url, int max_url_length) {
-    CURL *curl = curl_easy_init();
-    if (!curl) { return -1; }
-    char *decoded = curl_easy_unescape(curl, url, 0, NULL);
-    if (!decoded) {
-        curl_easy_cleanup(curl);
-        return -1;
-    }
-    strncpy(decoded_url, decoded, max_url_length);
-    curl_free(decoded);
-    curl_easy_cleanup(curl);
+int validate_ftp_url(char *url) {
+    static const char url_regex[] = "^(ftp|FTP)://"
+                                    "(((" URL_CHARS ")*(:(" URL_CHARS ")*)?@)?)"
+                                    "((" URL_CHARS ")+(\\.(" URL_CHARS ")+)+)"
+                                    "((:[[:digit:]]{1,4})?)"
+                                    "(/(" URL_CHARS ")*)*$";
+
+    regex_t regex;
+
+    if (regcomp(&regex, url_regex, REG_EXTENDED | REG_NOSUB)) { return -1; }
+
+    if (regexec(&regex, url, 0, NULL, 0)) { return -1; }
+
+    regfree(&regex);
+
     return 0;
 }
 
 int parse_url_con_info(char *url, struct con_info *con_info) {
-    if (strncmp(url, "ftp://", 6) != 0) {
-        fprintf(stderr, "Missing or unsuported protocol used.\n");
-        return -1;
+    regex_t regex;
+    regmatch_t pmatch[1];
+    regmatch_t temp_match;
+
+    static const char port[] = ":[[:digit:]]{1,4}[/]*";
+    if (regcomp(&regex, port, REG_EXTENDED)) { return -1; }
+    if (regexec(&regex, url, 1, pmatch, 0) == 0) {
+        temp_match = pmatch[0];
+        char temp[5];
+        snprintf(temp, sizeof temp, "%.*s",
+                 pmatch[0].rm_eo - pmatch[0].rm_so - 2,
+                 &url[pmatch[0].rm_so + 1]);
+        con_info->port = strtol(temp, NULL, 10);
+    } else {
+        temp_match.rm_so = -1;
+        con_info->port = DEFAULT_PORT;
     }
 
-    int url_start_idx = 0;
-    for (size_t i = 6; i < strlen(url); i++) {
-        if (url[i] == '/') {
-            url_start_idx = i;
-            break;
+    static const char address[] =
+        "[/@](" URL_CHARS ")+(\\.(" URL_CHARS
+        ")+)+(:[[:digit:]]{1,4})?(/(" URL_CHARS ")+)*[/]?";
+    if (regcomp(&regex, address, REG_EXTENDED)) { return -1; }
+    if (regexec(&regex, url, 1, pmatch, 0) == 0) {
+        if (temp_match.rm_so != -1) {
+            snprintf(con_info->addr, sizeof con_info->addr, "%.*s%.*s",
+                     temp_match.rm_so - pmatch[0].rm_so - 1,
+                     &url[pmatch[0].rm_so + 1],
+                     pmatch[0].rm_eo - temp_match.rm_eo + 1,
+                     &url[temp_match.rm_eo - 1]);
+        } else {
+            snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
+                     pmatch[0].rm_eo - pmatch[0].rm_so - 1,
+                     &url[pmatch[0].rm_so + 1]);
         }
+
+        temp_match = pmatch[0];
     }
 
-    if (url_start_idx == 0) { return -1; }
-
-    char temp_url[MAX_URL_LENGTH];
-    char temp_host[MAX_URL_LENGTH];
-    snprintf(temp_url, url_start_idx - 5, "%s", &url[6]);
-
-    char *tokens[] = {NULL, NULL, NULL, NULL};
-    int token_c = 0;
-    char *token = strtok(temp_url, "@:");
-
-    while (token != NULL && token_c < 4) {
-        tokens[token_c++] = token;
-        token = strtok(NULL, "@:");
+    static const char username[] = "/(" URL_CHARS ")*[:@]";
+    if (regcomp(&regex, username, REG_EXTENDED)) { return -1; }
+    if (regexec(&regex, url, 1, pmatch, 0) == 0 &&
+        pmatch[0].rm_so != temp_match.rm_so) {
+        snprintf(con_info->user, sizeof con_info->user, "%.*s",
+                 pmatch[0].rm_eo - pmatch[0].rm_so - 2,
+                 &url[pmatch[0].rm_so + 1]);
+    } else {
+        snprintf(con_info->user, sizeof con_info->user, ANONYMOUS_USER);
     }
 
-    if (token_c < 1) { return -1; }
-
-    snprintf(con_info->user, sizeof con_info->user, "%s", ANONYMOUS_USER);
-    snprintf(con_info->pass, sizeof con_info->pass, "%s", ANONYMOUS_USER_PASS);
-    con_info->port = DEFAULT_PORT;
-    int port = 0;
-
-    switch (token_c) {
-        case 1: snprintf(temp_host, sizeof temp_host, "%s", tokens[0]); break;
-        case 2:
-            port = 0;
-            if ((port = atoi(tokens[1])) != 0) {
-
-                con_info->port = port;
-                snprintf(temp_host, sizeof temp_host, "%s", tokens[0]);
-            } else {
-
-                snprintf(con_info->user, sizeof con_info->user, "%s",
-                         tokens[0]);
-                snprintf(temp_host, sizeof temp_host, "%s", tokens[1]);
-            }
-            break;
-        case 3:
-            port = 0;
-            if ((port = atoi(tokens[2])) != 0) {
-                con_info->port = port;
-                snprintf(temp_host, sizeof temp_host, "%s", tokens[1]);
-            } else {
-                snprintf(con_info->pass, sizeof con_info->pass, "%s",
-                         tokens[1]);
-                snprintf(temp_host, sizeof temp_host, "%s", tokens[2]);
-            }
-            snprintf(con_info->user, sizeof con_info->user, "%s", tokens[0]);
-            break;
-        case 4:
-            port = 0;
-            if ((port = atoi(tokens[3])) == 0) { return -1; }
-            con_info->port = port;
-            snprintf(temp_host, sizeof temp_host, "%s", tokens[1]);
-            snprintf(con_info->user, sizeof con_info->user, "%s", tokens[0]);
-            snprintf(con_info->pass, sizeof con_info->pass, "%s", tokens[1]);
-            snprintf(temp_host, sizeof temp_host, "%s", tokens[2]);
-            break;
-
-        default: break;
+    static const char password[] = ":(" URL_CHARS ")*@";
+    if (regcomp(&regex, password, REG_EXTENDED)) { return -1; }
+    if (regexec(&regex, url, 1, pmatch, 0) == 0) {
+        snprintf(con_info->pass, sizeof con_info->pass, "%.*s",
+                 pmatch[0].rm_eo - pmatch[0].rm_so - 2,
+                 &url[pmatch[0].rm_so + 1]);
+    } else {
+        snprintf(con_info->pass, sizeof con_info->pass, ANONYMOUS_USER_PASS);
     }
 
-    snprintf(temp_url, sizeof temp_url, "%s%s", temp_host, &url[url_start_idx]);
-    if (decode_url(temp_url, con_info->addr, sizeof con_info->addr) != 0) {
-        return -1;
-    }
+    regfree(&regex);
     return 0;
 }
 
 int main(int argc, char *argv[]) {
     if (argc < 1) {
+        print_usage(argv[0]);
+        return -1;
+    }
+
+    if (validate_ftp_url(argv[argc - 1]) != 0) {
         print_usage(argv[0]);
         return -1;
     }
