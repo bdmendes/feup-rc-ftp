@@ -46,20 +46,19 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
     regex_t regex;
     regmatch_t pmatch[1];
     regmatch_t temp_match;
-    static const char port_regex[] = ":[[:digit:]]{1,4}[/]*";
 
-    /* Compile regex */
+    /* Parse port */
+    static const char port_regex[] = ":[[:digit:]]{1,4}";
     if (regcomp(&regex, port_regex, REG_EXTENDED) != 0) {
         regfree(&regex);
         return -1;
     }
 
-    /* Parse port */
     if (regexec(&regex, url, 1, pmatch, 0) == 0) {
         temp_match = pmatch[0];
         char port_buf[5];
         snprintf(port_buf, sizeof port_buf, "%.*s",
-                 pmatch[0].rm_eo - pmatch[0].rm_so - 2,
+                 pmatch[0].rm_eo - pmatch[0].rm_so - 1,
                  &url[pmatch[0].rm_so + 1]);
         con_info->port = strtol(port_buf, NULL, 10);
     } else {
@@ -93,7 +92,10 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         if (resource_s != NULL) {
             snprintf(con_info->rsrc, sizeof con_info->rsrc, "%s", resource_s);
             snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
-                     (int)(resource_s - tempAddr), tempAddr);
+                     (int)(resource_s - tempAddr) - 1, tempAddr);
+        } else {
+            snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
+                     (int)(strnlen(tempAddr, MAX_URL_LENGTH)) - 1, tempAddr);
         }
         temp_match = pmatch[0];
     }
