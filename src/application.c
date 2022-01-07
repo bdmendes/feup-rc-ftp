@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "message.h"
 #include "network.h"
@@ -73,8 +74,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (close_socket(socket_fd) == 1) {
+    if (close_socket(socket_fd) == -1) {
         return -1;
     }
+    close(socket_fd);
     return 0;
 }
