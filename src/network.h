@@ -1,9 +1,11 @@
 #pragma once
 
-int open_connect_socket(const char *address, const int port);
+#define MAX_MSG_SIZE 4096
+
+int open_connect_socket(char *addr, int port);
 
 int close_socket(int fd);
 
-int send_message(int socket_fd, char *message, int length);
+int send_msg(int socket_fd, char *msg);
 
-int receive_message(int socket_fd, char *buf, int max_length);
+int receive_msg(int socket_fd, char *buf);

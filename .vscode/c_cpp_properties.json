@@ -1,0 +1,14 @@
+{
+    "configurations": [
+      {
+        "name": "linux_c",
+        "defines": [
+            "__linux__",
+            "__x86_64__",
+            "_GNU_SOURCE"
+            ],
+        "cStandard": "c11"
+      }
+    ],
+    "version": 4
+}
