@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "parser.h"
+#include "url_parser.h"
 
 #define ANONYMOUS_USER "anonymous"
 #define ANONYMOUS_USER_PASS "1234"
