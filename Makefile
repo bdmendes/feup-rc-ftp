@@ -1,6 +1,6 @@
 CC = gcc 
 CFLAGS = -Wall
-PROG_NAME = application
+PROG_NAME = download
 
 SRCDIR = src
 
@@ -9,9 +9,9 @@ OBJECTS := $(SOURCES:%.c=%.o)
 
 .PHONY: clean
 
-all: application
+all: download
 
-application: $(OBJECTS)
+download: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $(PROG_NAME) $(OBJECTS)
 
 clean:

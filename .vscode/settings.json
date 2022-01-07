@@ -1,5 +1,5 @@
 {
-    "clang-format.style": "{BasedOnStyle: LLVM, IndentWidth: 4, AllowShortBlocksOnASingleLine: Always, AllowShortCaseLabelsOnASingleLine: true, AllowShortFunctionsOnASingleLine: None, IndentCaseLabels: true, AllowShortIfStatementsOnASingleLine: Always}",
+    "clang-format.style": "{BasedOnStyle: LLVM, IndentWidth: 4, AllowShortBlocksOnASingleLine: Never, AllowShortCaseLabelsOnASingleLine: true, AllowShortFunctionsOnASingleLine: None, IndentCaseLabels: true, AllowShortIfStatementsOnASingleLine: Always}",
     "editor.formatOnSave": true,
     "editor.tabSize": 4,
     "editor.wordWrap": "bounded",
