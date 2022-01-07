@@ -34,8 +34,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    printf("%s, %s, %s, %d\n", con_info.addr, con_info.user, con_info.pass,
-           con_info.port);
+    printf("%s, %s, %s, %s, %d\n", con_info.addr, con_info.rsrc, con_info.user,
+           con_info.pass, con_info.port);
 
     int socket_fd;
     if ((socket_fd = open_connect_socket(con_info.addr, con_info.port)) == -1) {

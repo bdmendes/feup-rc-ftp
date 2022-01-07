@@ -6,6 +6,7 @@
 
 struct con_info {
     char addr[MAX_URL_LENGTH];
+    char rsrc[MAX_URL_LENGTH];
     char user[MAX_USER_LENGTH];
     char pass[MAX_PASS_LENGTH];
     int port;

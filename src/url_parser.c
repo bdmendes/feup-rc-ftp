@@ -27,7 +27,7 @@ int validate_ftp_url(char *url) {
         "(((" URL_CHARS_REGEX ")*(:(" URL_CHARS_REGEX ")*)?@)?)"
         "((" URL_CHARS_REGEX ")+(\\.(" URL_CHARS_REGEX ")+)+)"
         "((:[[:digit:]]{1,4})?)"
-        "(/(" URL_CHARS_REGEX ")*)*$";
+        "(/(" URL_CHARS_REGEX ")+)*[/]?$";
 
     regex_t regex;
     if (regcomp(&regex, url_regex, REG_EXTENDED | REG_NOSUB) != 0) {
@@ -76,16 +76,24 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         return -1;
     }
     if (regexec(&regex, url, 1, pmatch, 0) == 0) {
+        char tempAddr[MAX_URL_LENGTH];
         if (temp_match.rm_so != -1) {
-            snprintf(con_info->addr, sizeof con_info->addr, "%.*s%.*s",
+            snprintf(tempAddr, sizeof tempAddr, "%.*s%.*s",
                      temp_match.rm_so - pmatch[0].rm_so - 1,
                      &url[pmatch[0].rm_so + 1],
                      pmatch[0].rm_eo - temp_match.rm_eo + 1,
                      &url[temp_match.rm_eo - 1]);
         } else {
-            snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
+            snprintf(tempAddr, sizeof tempAddr, "%.*s",
                      pmatch[0].rm_eo - pmatch[0].rm_so - 1,
                      &url[pmatch[0].rm_so + 1]);
+        }
+
+        char *resource_s = strchr(tempAddr, '/');
+        if (resource_s != NULL) {
+            snprintf(con_info->rsrc, sizeof con_info->rsrc, "%s", resource_s);
+            snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
+                     (int)(resource_s - tempAddr), tempAddr);
         }
         temp_match = pmatch[0];
     }
