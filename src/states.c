@@ -100,3 +100,49 @@ int set_pasv_mode(int ctrl_socket_fd, char *pasv_addr) {
         }
     }
 }
+
+int retreive(int ctrl_socket_fd, char *path) {
+    char msg[MAX_MSG_SIZE];
+    int reply_code = -1;
+
+    snprintf(msg, sizeof msg, "retr %s\n", path);
+
+    for (;;) {
+        if (send_msg(ctrl_socket_fd, msg) == -1) {
+            return -1;
+        }
+
+        if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
+            return -1;
+        }
+
+        printf("code: %d\n", reply_code);
+
+        switch (reply_code) {
+            case 226: // Closing data connection. Requested file action
+                // successful (for example,file transfer or file abort)
+                return 0;
+            case 150: // File status okay; about to open data connection.
+                break;
+
+            case 425: // Can't open data connection.
+            case 426: // Connection closed; transfer aborted.
+            case 125: // Data connection already open; transfer starting.
+            case 110: // Restart marker reply.
+            case 250: // Requested file action okay, completed.
+
+            case 530: // Not logged in.
+
+            case 451: // Requested action aborted: local error in processing.
+            case 450: // Requested file action not taken. File unavailable
+                      // (e.g., file busy).
+            case 550: //  Requested action not taken. File unavailable (e.g.,
+                      //  file not found, no access).
+            case 500: // Syntax error, command unrecognized. This may include
+                      // errors such as command line too long.
+            case 501: // Syntax error in parameters or arguments.
+            case 421: // Service not available, closing control connection.
+            default: return -1;
+        }
+    }
+}

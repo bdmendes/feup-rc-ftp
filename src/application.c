@@ -117,5 +117,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    if (retreive(ctrl_socket_fd, con_info.rsrc) == -1) {
+        return -1;
+    }
+
     return 0;
 }
