@@ -45,8 +45,9 @@ int main(int argc, char *argv[]) {
     printf("%s, %s, %s, %s, %d\n", con_info.addr, con_info.rsrc, con_info.user,
            con_info.pass, con_info.port);
 
-    /*if ((ctrl_socket_fd = open_connect_socket(con_info.addr, con_info.port))
-    == -1) { return -1;
+    if ((ctrl_socket_fd = open_connect_socket(con_info.addr, con_info.port)) ==
+        -1) {
+        return -1;
     }
 
     if (atexit(close_ctrl_socket_fd) != 0) {
@@ -82,6 +83,7 @@ int main(int argc, char *argv[]) {
             printf("\n###\n%s###code: %d, is_end: %d\n", buf, c, end);
             if (end) {
                 printf("end! breaking\n");
+                break;
             }
         } else {
             break;
@@ -90,7 +92,7 @@ int main(int argc, char *argv[]) {
 
     if (close_socket(ctrl_socket_fd) == -1) {
         return -1;
-    }*/
+    }
 
     return 0;
 }

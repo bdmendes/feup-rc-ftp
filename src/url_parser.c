@@ -45,7 +45,7 @@ int validate_ftp_url(char *url) {
 int parse_url_con_info(char *url, struct con_info *con_info) {
     regex_t regex;
     regmatch_t pmatch[1];
-    regmatch_t temp_match;
+    regmatch_t last_match;
 
     /* Parse port */
     static const char port_regex[] = ":[[:digit:]]{1,4}";
@@ -55,14 +55,14 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
     }
 
     if (regexec(&regex, url, 1, pmatch, 0) == 0) {
-        temp_match = pmatch[0];
+        last_match = pmatch[0];
         char port_buf[5];
         snprintf(port_buf, sizeof port_buf, "%.*s",
                  pmatch[0].rm_eo - pmatch[0].rm_so - 1,
                  &url[pmatch[0].rm_so + 1]);
         con_info->port = strtol(port_buf, NULL, 10);
     } else {
-        temp_match.rm_so = -1;
+        last_match.rm_so = -1;
         con_info->port = DEFAULT_PORT;
     }
 
@@ -75,29 +75,29 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         return -1;
     }
     if (regexec(&regex, url, 1, pmatch, 0) == 0) {
-        char tempAddr[MAX_URL_LENGTH];
-        if (temp_match.rm_so != -1) {
-            snprintf(tempAddr, sizeof tempAddr, "%.*s%.*s",
-                     temp_match.rm_so - pmatch[0].rm_so - 1,
+        char buf[MAX_URL_LENGTH];
+        if (last_match.rm_so != -1) {
+            snprintf(buf, sizeof buf, "%.*s%.*s",
+                     last_match.rm_so - pmatch[0].rm_so - 1,
                      &url[pmatch[0].rm_so + 1],
-                     pmatch[0].rm_eo - temp_match.rm_eo + 1,
-                     &url[temp_match.rm_eo - 1]);
+                     pmatch[0].rm_eo - last_match.rm_eo + 1,
+                     &url[last_match.rm_eo]);
         } else {
-            snprintf(tempAddr, sizeof tempAddr, "%.*s",
+            snprintf(buf, sizeof buf, "%.*s",
                      pmatch[0].rm_eo - pmatch[0].rm_so - 1,
                      &url[pmatch[0].rm_so + 1]);
         }
 
-        char *resource_s = strchr(tempAddr, '/');
+        char *resource_s = strchr(buf, '/');
         if (resource_s != NULL) {
             snprintf(con_info->rsrc, sizeof con_info->rsrc, "%s", resource_s);
             snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
-                     (int)(resource_s - tempAddr) - 1, tempAddr);
+                     (int)(resource_s - buf), buf);
         } else {
             snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
-                     (int)(strnlen(tempAddr, MAX_URL_LENGTH)) - 1, tempAddr);
+                     (int)(strnlen(buf, MAX_URL_LENGTH)), buf);
         }
-        temp_match = pmatch[0];
+        last_match = pmatch[0];
     }
 
     /* Parse username */
@@ -106,7 +106,7 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         return -1;
     }
     if (regexec(&regex, url, 1, pmatch, 0) == 0 &&
-        pmatch[0].rm_so != temp_match.rm_so) {
+        pmatch[0].rm_so != last_match.rm_so) {
         snprintf(con_info->user, sizeof con_info->user, "%.*s",
                  pmatch[0].rm_eo - pmatch[0].rm_so - 2,
                  &url[pmatch[0].rm_so + 1]);
