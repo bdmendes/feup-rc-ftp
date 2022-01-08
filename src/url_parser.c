@@ -9,7 +9,7 @@
 
 #define ANONYMOUS_USER "anonymous"
 #define ANONYMOUS_USER_PASS "1234"
-#define DEFAULT_PORT 21
+#define DEFAULT_PORT "21"
 #define DEFAULT_RESOURCE "/"
 
 #define URL_CHARS_REGEX                                                        \
@@ -56,14 +56,12 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
 
     if (regexec(&regex, url, 1, pmatch, 0) == 0) {
         last_match = pmatch[0];
-        char port_buf[5];
-        snprintf(port_buf, sizeof port_buf, "%.*s",
+        snprintf(con_info->port, sizeof con_info->port, "%.*s",
                  pmatch[0].rm_eo - pmatch[0].rm_so - 1,
                  &url[pmatch[0].rm_so + 1]);
-        con_info->port = strtol(port_buf, NULL, 10);
     } else {
         last_match.rm_so = -1;
-        con_info->port = DEFAULT_PORT;
+        snprintf(con_info->port, sizeof con_info->port, "%s", DEFAULT_PORT);
     }
 
     /* Parse host address */
@@ -96,6 +94,7 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         } else {
             snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
                      (int)(strnlen(buf, MAX_URL_LENGTH)), buf);
+            strcpy(con_info->rsrc, "");
         }
         last_match = pmatch[0];
     }

@@ -3,23 +3,20 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "network.h"
 
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
-
-int open_connect_socket(char *addr, int port) {
+int open_connect_socket(char *addr, char *port) {
     struct addrinfo hints;
     struct addrinfo *addrinfo;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     int status;
-    char port_[PATH_MAX];
-    snprintf(port_, PATH_MAX, "%d", port);
-    if ((status = getaddrinfo(addr, port_, &hints, &addrinfo)) != 0) {
+
+    if ((status = getaddrinfo(addr, port, &hints, &addrinfo)) != 0) {
+        freeaddrinfo(addrinfo);
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return -1;
     }
@@ -27,15 +24,21 @@ int open_connect_socket(char *addr, int port) {
     int fd;
     if ((fd = socket(addrinfo->ai_family, addrinfo->ai_socktype,
                      addrinfo->ai_protocol)) == -1) {
+        freeaddrinfo(addrinfo);
         perror("socket");
         return -1;
     }
 
     if (connect(fd, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
+        freeaddrinfo(addrinfo);
         perror("connect");
+        if (close(fd) == -1) {
+            fprintf(stderr, "Error closing fd\n");
+        }
         return -1;
     }
 
+    freeaddrinfo(addrinfo);
     return fd;
 }
 
