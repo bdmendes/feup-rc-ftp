@@ -7,7 +7,7 @@
 
 #include "network.h"
 
-int open_connect_socket(char *addr, char *port) {
+int open_connect_socket(char *addr, char *port, int *ai_family) {
     struct addrinfo hints;
     struct addrinfo *addrinfo;
     memset(&hints, 0, sizeof hints);
@@ -36,6 +36,10 @@ int open_connect_socket(char *addr, char *port) {
             fprintf(stderr, "Error closing fd\n");
         }
         return -1;
+    }
+
+    if (ai_family != NULL) {
+        *ai_family = addrinfo->ai_family;
     }
 
     freeaddrinfo(addrinfo);
@@ -67,11 +71,19 @@ int send_msg(int socket_fd, char *msg) {
     return no_bytes;
 }
 
-int receive_msg(int socket_fd, char *buf) {
+int receive_msg(int socket_fd, char *buf, bool add_terminator) {
     int no_bytes;
-    if ((no_bytes = recv(socket_fd, buf, MAX_MSG_SIZE - 1, 0)) == -1) {
-        perror("recv");
+
+    if (add_terminator) {
+        if ((no_bytes = recv(socket_fd, buf, MAX_MSG_SIZE - 1, 0)) == -1) {
+            perror("recv");
+        }
+        buf[no_bytes] = '\0';
+    } else {
+        if ((no_bytes = recv(socket_fd, buf, MAX_MSG_SIZE, 0)) == -1) {
+            perror("recv");
+        }
     }
-    buf[no_bytes] = '\0';
+
     return no_bytes;
 }
