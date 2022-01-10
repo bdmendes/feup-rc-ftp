@@ -181,6 +181,7 @@ int transfer_data(int data_socket_fd, int data_file_fd) {
     int total_bytes_written = 0;
 
     for (;;) {
+        total_bytes_written = 0;
         total_bytes_read = -1;
         no_bytes_written = -1;
 
@@ -194,7 +195,8 @@ int transfer_data(int data_socket_fd, int data_file_fd) {
 
         while (total_bytes_written < total_bytes_read) {
             if ((no_bytes_written =
-                     write(data_file_fd, buf, total_bytes_read)) == -1) {
+                     write(data_file_fd, buf + total_bytes_written,
+                           total_bytes_read - total_bytes_written)) == -1) {
                 perror("Write file");
                 return -1;
             }

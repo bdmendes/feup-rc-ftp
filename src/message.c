@@ -45,7 +45,7 @@ void parse_pasv_msg(char *msg, char *parsed) {
 
     strncat(ip, strtok(NULL, "(,)"), 3);
     for (int i = 0; i < 3; i++) {
-        strcat(ip, ".");
+        strncat(ip, ".", 2);
         strncat(ip, strtok(NULL, "(,)"), 3);
     }
 

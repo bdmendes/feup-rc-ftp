@@ -94,7 +94,7 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         } else {
             snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
                      (int)(strnlen(buf, MAX_URL_LENGTH)), buf);
-            strcpy(con_info->rsrc, "");
+            snprintf(con_info->rsrc, sizeof con_info->rsrc, "/");
         }
         last_match = pmatch[0];
     }
