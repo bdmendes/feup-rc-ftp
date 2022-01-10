@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #ifndef MAX_MSG_SIZE
-#define MAX_MSG_SIZE 4096
+#define MAX_MSG_SIZE 256000
 #endif
 
 int open_connect_socket(char *addr, char *port, int *ai_family);
