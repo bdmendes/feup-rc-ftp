@@ -13,7 +13,7 @@ int read_reply_code(int ctrl_socket_fd, char *msg) {
 
     // Read the current message and get the reply code
     for (int tries = 0; tries < 3;) {
-        if (receive_msg(ctrl_socket_fd, msg, true) != -1) {
+        if (receive_msg(ctrl_socket_fd, MAX_CTRL_MSG_SIZE, msg, true) != -1) {
             if (is_end_reply(msg)) {
                 reply_code = ftp_code(msg);
                 break;
@@ -26,7 +26,7 @@ int read_reply_code(int ctrl_socket_fd, char *msg) {
 }
 
 int login(int ctrl_socket_fd, char *user, char *pass) {
-    char msg[MAX_MSG_SIZE];
+    char msg[MAX_CTRL_MSG_SIZE];
     int reply_code = -1;
 
     for (;;) {
@@ -65,7 +65,7 @@ int login(int ctrl_socket_fd, char *user, char *pass) {
 }
 
 int set_pasv_mode(int ctrl_socket_fd, int ai_family, char *pasv_addr) {
-    char msg[MAX_MSG_SIZE];
+    char msg[MAX_CTRL_MSG_SIZE];
     int reply_code = -1;
 
     if (ai_family == AF_INET) {
@@ -101,7 +101,7 @@ int set_pasv_mode(int ctrl_socket_fd, int ai_family, char *pasv_addr) {
 }
 
 int init_retrieve(int ctrl_socket_fd, char *path) {
-    char msg[MAX_MSG_SIZE];
+    char msg[MAX_CTRL_MSG_SIZE];
     int reply_code = -1;
 
     snprintf(msg, sizeof msg, "retr %s\n", path);
@@ -140,7 +140,7 @@ int init_retrieve(int ctrl_socket_fd, char *path) {
 }
 
 int end_retrieve(int ctrl_socket_fd) {
-    char msg[MAX_MSG_SIZE];
+    char msg[MAX_CTRL_MSG_SIZE];
     int reply_code = -1;
 
     for (;;) {
@@ -175,7 +175,7 @@ int end_retrieve(int ctrl_socket_fd) {
 }
 
 int transfer_data(int data_socket_fd, int data_file_fd) {
-    char buf[MAX_MSG_SIZE];
+    char buf[MAX_BULK_DATA_MSG_SIZE];
     int total_bytes_read = -1;
     int no_bytes_written = -1;
     int total_bytes_written = 0;
@@ -185,8 +185,8 @@ int transfer_data(int data_socket_fd, int data_file_fd) {
         total_bytes_read = -1;
         no_bytes_written = -1;
 
-        if ((total_bytes_read = receive_msg(data_socket_fd, buf, false)) ==
-            -1) {
+        if ((total_bytes_read = receive_msg(
+                 data_socket_fd, MAX_BULK_DATA_MSG_SIZE, buf, false)) == -1) {
             return -1;
         }
         if (total_bytes_read == 0) {
@@ -207,7 +207,7 @@ int transfer_data(int data_socket_fd, int data_file_fd) {
 }
 
 void logout(int ctrl_socket_fd) {
-    char msg[MAX_MSG_SIZE];
+    char msg[MAX_CTRL_MSG_SIZE];
 
     snprintf(msg, sizeof msg, "quit\n");
 

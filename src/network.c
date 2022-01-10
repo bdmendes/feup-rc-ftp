@@ -56,7 +56,7 @@ int close_socket(int fd) {
 
 int send_msg(int socket_fd, char *msg) {
     int no_bytes = 0;
-    int size = strnlen(msg, MAX_MSG_SIZE);
+    int size = strnlen(msg, MAX_CTRL_MSG_SIZE);
     if (msg[size - 1] != '\n') {
         msg[size++] = '\n';
     }
@@ -71,16 +71,16 @@ int send_msg(int socket_fd, char *msg) {
     return no_bytes;
 }
 
-int receive_msg(int socket_fd, char *buf, bool add_terminator) {
+int receive_msg(int socket_fd, int buf_size, char *buf, bool add_terminator) {
     int no_bytes;
 
     if (add_terminator) {
-        if ((no_bytes = recv(socket_fd, buf, MAX_MSG_SIZE - 1, 0)) == -1) {
+        if ((no_bytes = recv(socket_fd, buf, buf_size - 1, 0)) == -1) {
             perror("recv");
         }
         buf[no_bytes] = '\0';
     } else {
-        if ((no_bytes = recv(socket_fd, buf, MAX_MSG_SIZE, 0)) == -1) {
+        if ((no_bytes = recv(socket_fd, buf, buf_size, 0)) == -1) {
             perror("recv");
         }
     }
