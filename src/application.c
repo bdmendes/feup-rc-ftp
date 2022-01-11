@@ -5,17 +5,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "message.h"
 #include "network.h"
 #include "states.h"
 #include "url_parser.h"
+#include "utils.h"
 
 #define PATH_MAX 4096
 
 int ctrl_socket_fd = -1;
+
 int data_socket_fd = -1;
+
 bool close_data_file_required = true;
 int data_file_fd = -1;
 
@@ -63,10 +67,14 @@ static void close_delete_data_file(char *data_file_path) {
     }
 }
 
-int create_open_file(char *server_rsrc_path, char *file_path) {
+void get_resource_name(char *server_rsrc_path, int file_name_size,
+                       char *file_name) {
+    strncpy(file_name, strrchr(server_rsrc_path, '/') + 1, file_name_size);
+}
+
+int create_open_data_file(char *file_name, int file_path_size,
+                          char *file_path) {
     /* Create and open file for incoming data*/
-    char file_name[PATH_MAX];
-    strncpy(file_name, strrchr(server_rsrc_path, '/') + 1, PATH_MAX);
     char file_path_[PATH_MAX];
     snprintf(file_path_, PATH_MAX, "./%.*s",
              (int)(strnlen(file_name, PATH_MAX)), file_name);
@@ -87,7 +95,7 @@ int create_open_file(char *server_rsrc_path, char *file_path) {
     }
 
     if (file_path != NULL) {
-        strncpy(file_path, file_path_, PATH_MAX);
+        strncpy(file_path, file_path_, file_path_size);
     }
 
     int fd = -1;
@@ -140,6 +148,7 @@ int main(int argc, char *argv[]) {
         if (close(ctrl_socket_fd) != -1) {
             perror("Close control socket FD");
         }
+
         return -1;
     }
 
@@ -154,6 +163,24 @@ int main(int argc, char *argv[]) {
         }
         return -1;
     }
+
+    /* Query if it is regular file and get size*/
+    size_t size = 0;
+    if ((ret = get_file_size(ctrl_socket_fd, con_info.rsrc, &size)) < 0) {
+        if (ret == -2) {
+            fprintf(stderr, "Error: Not Found\n");
+        }
+        if (ret == -3) {
+            fprintf(stderr, "Error: Requested directory\n");
+        }
+
+        return -1;
+    }
+
+    char file_name[PATH_MAX];
+    get_resource_name(con_info.rsrc, PATH_MAX, file_name);
+
+    printf("Downloading: %s, %ld bytes\n", file_name, size);
 
     /* Set passive mode and open data socket */
     char pasv_addr[MAX_ADDRESS_SIZE];
@@ -193,7 +220,8 @@ int main(int argc, char *argv[]) {
 
     /* Create and open file for incoming data*/
     char file_path[PATH_MAX];
-    if ((data_file_fd = create_open_file(con_info.rsrc, file_path)) == -1) {
+    if ((data_file_fd =
+             create_open_data_file(file_name, PATH_MAX, file_path)) == -1) {
         return -1;
     }
     if (atexit(close_data_file_fd) != 0) {
@@ -204,24 +232,38 @@ int main(int argc, char *argv[]) {
 
     /* Initiate tranfer */
     if (init_retrieve(ctrl_socket_fd, con_info.rsrc) == -1) {
-        close_delete_data_file(file_path);
         return -1;
     }
 
     /* Read from socket and write to file */
-    if (transfer_data(data_socket_fd, data_file_fd) == -1) {
-        close_delete_data_file(file_path);
+    struct timespec start_time, end_time;
+    if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+        perror("Clock get start time");
+    }
+    if (transfer_data(data_socket_fd, data_file_fd, size) == -1) {
         return -1;
+    }
+    if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+        perror("Clock get end time");
     }
 
     /* End transfer */
     if (end_retrieve(ctrl_socket_fd) == -1) {
-        close_delete_data_file(file_path);
         return -1;
     }
 
     /* Logout */
     logout(ctrl_socket_fd);
+
+    struct stat st;
+    if (stat(file_path, &st) == -1) {
+        perror("Stat");
+    } else {
+        double elapsed_secs = elapsed_seconds(&start_time, &end_time);
+        double kbs = ((double)st.st_size / 1000) / elapsed_secs;
+        printf("Elapsed time: %.2fs\n", elapsed_secs);
+        printf("Average speed: %.2fKB/s\n", kbs);
+    }
 
     return 0;
 }

@@ -15,4 +15,4 @@ int close_socket(int fd);
 
 int send_msg(int socket_fd, char *msg);
 
-int receive_msg(int socket_fd, int buf_size, char *buf, bool add_terminator);
+int receive_data(int socket_fd, int buf_size, char *buf, bool add_terminator);

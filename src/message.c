@@ -1,6 +1,8 @@
 #include "message.h"
+#include "network.h"
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,8 +36,49 @@ bool is_end_reply(char *msg) {
     return found_space;
 }
 
-void parse_pasv_msg(char *msg, char *parsed) {
-    char buf[MAX_MSG_SIZE];
+bool parse_stat_reply_not_found(char *msg) {
+    char msg_token_buf[MAX_BULK_DATA_MSG_SIZE];
+    strncpy(msg_token_buf, msg, sizeof msg_token_buf);
+
+    strtok(msg_token_buf, "\n");
+
+    char *line = strtok(NULL, "\n");
+
+    return (line[0] == '2');
+}
+
+bool parse_stat_reply_is_dir(char *msg) {
+    char msg_token_buf[MAX_BULK_DATA_MSG_SIZE];
+    strncpy(msg_token_buf, msg, sizeof msg_token_buf);
+
+    strtok(msg_token_buf, "\n");
+
+    char *line = strtok(NULL, "\n");
+
+    return (line[0] == 'd');
+}
+
+size_t parse_stat_reply_size(char *msg) {
+    char msg_token_buf[MAX_BULK_DATA_MSG_SIZE];
+    strncpy(msg_token_buf, msg, sizeof msg_token_buf);
+
+    strtok(msg_token_buf, "\n");
+
+    char line_token_buf[MAX_BULK_DATA_MSG_SIZE];
+    strncpy(line_token_buf, strtok(NULL, "\n"), sizeof line_token_buf);
+
+    strtok(line_token_buf, " ");
+    for (int i = 0; i < 3; i++) {
+        strtok(NULL, " ");
+    }
+
+    char *size_token = strtok(NULL, " ");
+
+    return strtoul(size_token, NULL, 10);
+}
+
+void parse_pasv_reply(char *msg, char *parsed) {
+    char buf[MAX_CTRL_MSG_SIZE];
     strncpy(buf, msg, sizeof buf);
     char ip[16];
     int a = -1;
@@ -59,8 +102,8 @@ void parse_pasv_msg(char *msg, char *parsed) {
     snprintf(parsed, MAX_ADDRESS_SIZE, "%s:%d", ip, a);
 }
 
-void parse_epsv_msg(char *msg, char *parsed) {
-    char buf[MAX_MSG_SIZE];
+void parse_epsv_reply(char *msg, char *parsed) {
+    char buf[MAX_CTRL_MSG_SIZE];
     strncpy(buf, msg, sizeof buf);
 
     strtok(buf, "(|)");

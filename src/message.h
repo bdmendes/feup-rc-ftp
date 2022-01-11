@@ -1,10 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-
-#ifndef MAX_MSG_SIZE
-#define MAX_MSG_SIZE 4096
-#endif
+#include <stdlib.h>
 
 #define MAX_ADDRESS_SIZE 30
 
@@ -12,6 +9,12 @@ int ftp_code(char *msg);
 
 bool is_end_reply(char *msg);
 
-void parse_pasv_msg(char *msg, char *parsed);
+bool parse_stat_reply_not_found(char *msg);
 
-void parse_epsv_msg(char *msg, char *parsed);
+bool parse_stat_reply_is_dir(char *msg);
+
+size_t parse_stat_reply_size(char *msg);
+
+void parse_pasv_reply(char *msg, char *parsed);
+
+void parse_epsv_reply(char *msg, char *parsed);
