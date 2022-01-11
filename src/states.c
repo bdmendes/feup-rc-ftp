@@ -145,29 +145,27 @@ int set_pasv_mode(int ctrl_socket_fd, int ai_family, char *pasv_addr) {
         snprintf(msg, sizeof msg, "epsv\n");
     }
 
-    for (;;) {
-        if (send_msg(ctrl_socket_fd, msg) == -1) {
-            return -1;
-        }
+    if (send_msg(ctrl_socket_fd, msg) == -1) {
+        return -1;
+    }
 
-        if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
-            return -1;
-        }
+    if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
+        return -1;
+    }
 
-        switch (reply_code) {
-            case 227: // Entering Passive Mode (h1,h2,h3,h4,p1,p2).
-                parse_pasv_reply(msg, pasv_addr);
-                return 0;
-            case 229: // Entering Extended Passive Mode (|||port|).
-                parse_epsv_reply(msg, pasv_addr);
-                return 1;
-            case 500: // Syntax error
-            case 501: // Syntax error in parameters or arguments
-            case 502: // Command not implemented
-            case 530: // Not logged in
-            case 421: // Service not available, closing control connection.
-            default: return -1;
-        }
+    switch (reply_code) {
+        case 227: // Entering Passive Mode (h1,h2,h3,h4,p1,p2).
+            parse_pasv_reply(msg, pasv_addr);
+            return 0;
+        case 229: // Entering Extended Passive Mode (|||port|).
+            parse_epsv_reply(msg, pasv_addr);
+            return 1;
+        case 500: // Syntax error
+        case 501: // Syntax error in parameters or arguments
+        case 502: // Command not implemented
+        case 530: // Not logged in
+        case 421: // Service not available, closing control connection.
+        default: return -1;
     }
 }
 
@@ -177,36 +175,34 @@ int init_retrieve(int ctrl_socket_fd, char *path) {
 
     snprintf(msg, sizeof msg, "retr %s\n", path);
 
-    for (;;) {
-        if (send_msg(ctrl_socket_fd, msg) == -1) {
-            return -1;
-        }
+    if (send_msg(ctrl_socket_fd, msg) == -1) {
+        return -1;
+    }
 
-        if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
-            return -1;
-        }
+    if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
+        return -1;
+    }
 
-        switch (reply_code) {
-            case 150: // File status okay; about to open data connection.
-            case 125: // Data connection already open; transfer starting.
-                return 0;
+    switch (reply_code) {
+        case 150: // File status okay; about to open data connection.
+        case 125: // Data connection already open; transfer starting.
+            return 0;
 
-            case 110: // Restart marker reply.
-            case 425: // Can't open data connection.
-            case 426: // Connection closed; transfer aborted.
-            case 530: // Not logged in.
-            case 451: // Requested action aborted: local error in processing.
-            case 450: // Requested file action not taken. File unavailable
-                      // (e.g., file busy).
-            case 550: //  Requested action not taken. File unavailable (e.g.,
-                      //  file not found, no access).
-            case 500: // Syntax error, command unrecognized. This may include
-                      // errors such as command line too long.
-            case 501: // Syntax error in parameters or arguments.
-            case 421: // Service not available, closing
-                      // control connection.
-            default: return -1;
-        }
+        case 110: // Restart marker reply.
+        case 425: // Can't open data connection.
+        case 426: // Connection closed; transfer aborted.
+        case 530: // Not logged in.
+        case 451: // Requested action aborted: local error in processing.
+        case 450: // Requested file action not taken. File unavailable
+                  // (e.g., file busy).
+        case 550: //  Requested action not taken. File unavailable (e.g.,
+                  //  file not found, no access).
+        case 500: // Syntax error, command unrecognized. This may include
+                  // errors such as command line too long.
+        case 501: // Syntax error in parameters or arguments.
+        case 421: // Service not available, closing
+                  // control connection.
+        default: return -1;
     }
 }
 
@@ -214,34 +210,31 @@ int end_retrieve(int ctrl_socket_fd) {
     char msg[MAX_CTRL_MSG_SIZE];
     int reply_code = -1;
 
-    for (;;) {
-        if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
-            return -1;
-        }
+    if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
+        return -1;
+    }
 
-        switch (reply_code) {
-            case 226: // Closing data connection. Requested file action
-                      // successful (for example,file transfer or file abort)
-            case 250: // Requested file action okay, completed.
-                return 0;
-            case 150: // File status okay; about to open data connection.
-            case 125: // Data connection already open; transfer starting.
-            case 110: // Restart marker reply.
-                break;
-            case 425: // Can't open data connection.
-            case 426: // Connection closed; transfer aborted.
-            case 530: // Not logged in.
-            case 451: // Requested action aborted: local error in processing.
-            case 450: // Requested file action not taken. File unavailable
-                      // (e.g., file busy).
-            case 550: //  Requested action not taken. File unavailable (e.g.,
-                      //  file not found, no access).
-            case 500: // Syntax error, command unrecognized. This may include
-                      // errors such as command line too long.
-            case 501: // Syntax error in parameters or arguments.
-            case 421: // Service not available, closing control connection.
-            default: return -1;
-        }
+    switch (reply_code) {
+        case 226: // Closing data connection. Requested file action
+                  // successful (for example,file transfer or file abort)
+        case 250: // Requested file action okay, completed.
+            return 0;
+        case 150: // File status okay; about to open data connection.
+        case 125: // Data connection already open; transfer starting.
+        case 110: // Restart marker reply.
+        case 425: // Can't open data connection.
+        case 426: // Connection closed; transfer aborted.
+        case 530: // Not logged in.
+        case 451: // Requested action aborted: local error in processing.
+        case 450: // Requested file action not taken. File unavailable
+                  // (e.g., file busy).
+        case 550: //  Requested action not taken. File unavailable (e.g.,
+                  //  file not found, no access).
+        case 500: // Syntax error, command unrecognized. This may include
+                  // errors such as command line too long.
+        case 501: // Syntax error in parameters or arguments.
+        case 421: // Service not available, closing control connection.
+        default: return -1;
     }
 }
 
