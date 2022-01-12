@@ -9,7 +9,7 @@
 
 #define ANONYMOUS_USER "anonymous"
 #define ANONYMOUS_USER_PASS "1234"
-#define DEFAULT_PORT 21
+#define DEFAULT_PORT "21"
 #define DEFAULT_RESOURCE "/"
 
 #define URL_CHARS_REGEX                                                        \
@@ -27,7 +27,7 @@ int validate_ftp_url(char *url) {
         "(((" URL_CHARS_REGEX ")*(:(" URL_CHARS_REGEX ")*)?@)?)"
         "((" URL_CHARS_REGEX ")+(\\.(" URL_CHARS_REGEX ")+)+)"
         "((:[[:digit:]]{1,4})?)"
-        "(/(" URL_CHARS_REGEX ")*)*$";
+        "(/(" URL_CHARS_REGEX ")+)*[/]?$";
 
     regex_t regex;
     if (regcomp(&regex, url_regex, REG_EXTENDED | REG_NOSUB) != 0) {
@@ -45,26 +45,23 @@ int validate_ftp_url(char *url) {
 int parse_url_con_info(char *url, struct con_info *con_info) {
     regex_t regex;
     regmatch_t pmatch[1];
-    regmatch_t temp_match;
-    static const char port_regex[] = ":[[:digit:]]{1,4}[/]*";
+    regmatch_t last_match;
 
-    /* Compile regex */
+    /* Parse port */
+    static const char port_regex[] = ":[[:digit:]]{1,4}";
     if (regcomp(&regex, port_regex, REG_EXTENDED) != 0) {
         regfree(&regex);
         return -1;
     }
 
-    /* Parse port */
     if (regexec(&regex, url, 1, pmatch, 0) == 0) {
-        temp_match = pmatch[0];
-        char port_buf[5];
-        snprintf(port_buf, sizeof port_buf, "%.*s",
-                 pmatch[0].rm_eo - pmatch[0].rm_so - 2,
+        last_match = pmatch[0];
+        snprintf(con_info->port, sizeof con_info->port, "%.*s",
+                 pmatch[0].rm_eo - pmatch[0].rm_so - 1,
                  &url[pmatch[0].rm_so + 1]);
-        con_info->port = strtol(port_buf, NULL, 10);
     } else {
-        temp_match.rm_so = -1;
-        con_info->port = DEFAULT_PORT;
+        last_match.rm_so = -1;
+        snprintf(con_info->port, sizeof con_info->port, "%s", DEFAULT_PORT);
     }
 
     /* Parse host address */
@@ -76,18 +73,31 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         return -1;
     }
     if (regexec(&regex, url, 1, pmatch, 0) == 0) {
-        if (temp_match.rm_so != -1) {
-            snprintf(con_info->addr, sizeof con_info->addr, "%.*s%.*s",
-                     temp_match.rm_so - pmatch[0].rm_so - 1,
+        char buf[MAX_URL_LENGTH];
+        if (last_match.rm_so != -1) {
+            snprintf(buf, sizeof buf, "%.*s%.*s",
+                     last_match.rm_so - pmatch[0].rm_so - 1,
                      &url[pmatch[0].rm_so + 1],
-                     pmatch[0].rm_eo - temp_match.rm_eo + 1,
-                     &url[temp_match.rm_eo - 1]);
+                     pmatch[0].rm_eo - last_match.rm_eo + 1,
+                     &url[last_match.rm_eo]);
         } else {
-            snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
+            snprintf(buf, sizeof buf, "%.*s",
                      pmatch[0].rm_eo - pmatch[0].rm_so - 1,
                      &url[pmatch[0].rm_so + 1]);
         }
-        temp_match = pmatch[0];
+
+        char *resource_s = strchr(buf, '/');
+        if (resource_s != NULL) {
+            snprintf(con_info->resource, sizeof con_info->resource, "%s",
+                     resource_s);
+            snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
+                     (int)(resource_s - buf), buf);
+        } else {
+            snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
+                     (int)(strnlen(buf, MAX_URL_LENGTH)), buf);
+            snprintf(con_info->resource, sizeof con_info->resource, "/");
+        }
+        last_match = pmatch[0];
     }
 
     /* Parse username */
@@ -96,7 +106,7 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
         return -1;
     }
     if (regexec(&regex, url, 1, pmatch, 0) == 0 &&
-        pmatch[0].rm_so != temp_match.rm_so) {
+        pmatch[0].rm_so != last_match.rm_so) {
         snprintf(con_info->user, sizeof con_info->user, "%.*s",
                  pmatch[0].rm_eo - pmatch[0].rm_so - 2,
                  &url[pmatch[0].rm_so + 1]);

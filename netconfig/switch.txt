@@ -1,0 +1,33 @@
+enable
+
+configure terminal
+vlan 10
+end
+
+configure terminal
+interface fastethernet 0/13
+switchport mode access
+switchport access vlan 10
+end
+show running-config interface fastethernet 0/13
+show interfaces fastethernet 0/13 switchport
+
+configure terminal
+interface fastethernet 0/14
+switchport mode access
+switchport access vlan 10
+end
+show running-config interface fastethernet 0/14
+show interfaces fastethernet 0/14 switchport
+
+configure terminal
+vlan 11
+end
+
+configure terminal
+interface fastethernet 0/12
+switchport mode access
+switchport access vlan 11
+end
+show running-config interface fastethernet 0/12
+show interfaces fastethernet 0/12 switchport
