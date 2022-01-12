@@ -14,4 +14,4 @@ int end_retrieve(int ctrl_socket_fd);
 
 int transfer_data(int data_socket_fd, int data_file_fd, size_t size);
 
-void logout(int ctrl_socket_fd);
+int logout(int ctrl_socket_fd);

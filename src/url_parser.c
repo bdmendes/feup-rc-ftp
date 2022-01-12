@@ -88,13 +88,14 @@ int parse_url_con_info(char *url, struct con_info *con_info) {
 
         char *resource_s = strchr(buf, '/');
         if (resource_s != NULL) {
-            snprintf(con_info->rsrc, sizeof con_info->rsrc, "%s", resource_s);
+            snprintf(con_info->resource, sizeof con_info->resource, "%s",
+                     resource_s);
             snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
                      (int)(resource_s - buf), buf);
         } else {
             snprintf(con_info->addr, sizeof con_info->addr, "%.*s",
                      (int)(strnlen(buf, MAX_URL_LENGTH)), buf);
-            snprintf(con_info->rsrc, sizeof con_info->rsrc, "/");
+            snprintf(con_info->resource, sizeof con_info->resource, "/");
         }
         last_match = pmatch[0];
     }

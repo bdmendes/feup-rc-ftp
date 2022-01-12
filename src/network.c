@@ -48,8 +48,11 @@ int open_connect_socket(char *addr, char *port, int *ai_family) {
 
 int close_socket(int fd) {
     if (shutdown(fd, SHUT_RDWR) == -1) {
-        perror("shutdown");
+        perror("Shutdown");
         return -1;
+    }
+    if (close(fd) == -1) {
+        perror("Close");
     }
     return 0;
 }

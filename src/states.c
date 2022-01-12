@@ -36,7 +36,6 @@ int read_msg(int ctrl_socket_fd, int msg_size, char *msg) {
         }
 
         int max_len = MIN(msg_size - total_read_bytes - 1, sizeof buf);
-
         if ((no_bytes = receive_data(ctrl_socket_fd, max_len, buf, true)) ==
             -1) {
             tries++;
@@ -45,7 +44,6 @@ int read_msg(int ctrl_socket_fd, int msg_size, char *msg) {
 
         strncat(msg, buf, msg_size - total_read_bytes - 1);
         total_read_bytes += no_bytes;
-
         if (is_end_reply(msg)) {
             return ftp_code(msg);
         }
@@ -60,33 +58,27 @@ int login(int ctrl_socket_fd, char *user, char *pass) {
 
     for (;;) {
         reply_code = -1;
-
         if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
             return -1;
         }
-
         switch (reply_code) {
             case 220: // Service ready for new user.
                 snprintf(msg, sizeof msg, "user %s\n", user);
                 break;
-
             case 331: // User name okay, need password.
                 snprintf(msg, sizeof msg, "pass %s\n", pass);
                 break;
-
             case 230: return 0; // Logged in
             case 500:           // Syntax error
             case 501:           // Syntax error in parameters or arguments
                 return -2;
             case 332: // Need account to log in
                 return -3;
-
             case 530: // Not logged in
             case 120: // Service ready in nnn minutes
             case 421: // Service not available, closing control connection.
             default: return -1;
         }
-
         if (send_msg(ctrl_socket_fd, msg) == -1) {
             return -1;
         }
@@ -99,27 +91,23 @@ int get_file_size(int ctrl_socket_fd, char *path, size_t *size) {
 
     for (;;) {
         snprintf(msg, sizeof msg, "stat %s\n", path);
-
         if (send_msg(ctrl_socket_fd, msg) == -1) {
             return -1;
         }
-
         msg[0] = '\0';
         if ((reply_code = read_msg(ctrl_socket_fd, sizeof msg, msg)) == -1) {
             return -1;
         }
-
         switch (reply_code) {
             case 212: // Directory status.
             case 213: // File status.
-                if (parse_stat_reply_not_found(msg)) {
+                if (stat_reply_not_found(msg)) {
                     return -2;
                 }
-
-                if (parse_stat_reply_is_dir(msg)) {
+                if (stat_reply_is_dir(msg)) {
                     return -3;
                 }
-                *size = parse_stat_reply_size(msg);
+                *size = stat_reply_size(msg);
                 return 0;
             case 450: // Requested file action not taken.
                 break;
@@ -144,7 +132,6 @@ int set_pasv_mode(int ctrl_socket_fd, int ai_family, char *pasv_addr) {
     } else {
         snprintf(msg, sizeof msg, "epsv\n");
     }
-
     if (send_msg(ctrl_socket_fd, msg) == -1) {
         return -1;
     }
@@ -152,7 +139,6 @@ int set_pasv_mode(int ctrl_socket_fd, int ai_family, char *pasv_addr) {
     if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
         return -1;
     }
-
     switch (reply_code) {
         case 227: // Entering Passive Mode (h1,h2,h3,h4,p1,p2).
             parse_pasv_reply(msg, pasv_addr);
@@ -174,7 +160,6 @@ int init_retrieve(int ctrl_socket_fd, char *path) {
     int reply_code = -1;
 
     snprintf(msg, sizeof msg, "retr %s\n", path);
-
     if (send_msg(ctrl_socket_fd, msg) == -1) {
         return -1;
     }
@@ -182,12 +167,10 @@ int init_retrieve(int ctrl_socket_fd, char *path) {
     if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
         return -1;
     }
-
     switch (reply_code) {
         case 150: // File status okay; about to open data connection.
         case 125: // Data connection already open; transfer starting.
             return 0;
-
         case 110: // Restart marker reply.
         case 425: // Can't open data connection.
         case 426: // Connection closed; transfer aborted.
@@ -213,7 +196,6 @@ int end_retrieve(int ctrl_socket_fd) {
     if ((reply_code = read_reply_code(ctrl_socket_fd, msg)) == -1) {
         return -1;
     }
-
     switch (reply_code) {
         case 226: // Closing data connection. Requested file action
                   // successful (for example,file transfer or file abort)
@@ -255,7 +237,6 @@ int transfer_data(int data_socket_fd, int data_file_fd, size_t size) {
             return -1;
         }
         if (bytes_read == 0) {
-
             return 0;
         }
 
@@ -266,7 +247,6 @@ int transfer_data(int data_socket_fd, int data_file_fd, size_t size) {
                 perror("Write file");
                 return -1;
             }
-
             total_bytes_written += no_bytes_written;
         }
         total_bytes_read += bytes_read;
@@ -274,10 +254,8 @@ int transfer_data(int data_socket_fd, int data_file_fd, size_t size) {
     }
 }
 
-void logout(int ctrl_socket_fd) {
+int logout(int ctrl_socket_fd) {
     char msg[MAX_CTRL_MSG_SIZE];
-
     snprintf(msg, sizeof msg, "quit\n");
-
-    send_msg(ctrl_socket_fd, msg);
+    return send_msg(ctrl_socket_fd, msg);
 }
