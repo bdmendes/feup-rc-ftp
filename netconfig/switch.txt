@@ -39,3 +39,11 @@ switchport access vlan 11
 end
 
 show vlan brief
+
+configure terminal
+interface fastethernet 0/1
+switchport mode access
+switchport access vlan 11
+end
+
+show vlan brief
