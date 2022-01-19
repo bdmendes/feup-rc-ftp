@@ -20,3 +20,5 @@ ip addr show
 ip route show
 
 ip -family inet neigh flush any
+
+ip route add default via 172.16.11.254

@@ -13,3 +13,5 @@ ip route add 172.16.11.0/24 via 172.16.10.254
 ip route show
 
 ip -family inet neigh flush any
+
+ip route add default via 172.16.10.254
