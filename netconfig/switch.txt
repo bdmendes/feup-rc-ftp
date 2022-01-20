@@ -31,3 +31,19 @@ switchport access vlan 11
 end
 show running-config interface fastethernet 0/12
 show interfaces fastethernet 0/12 switchport
+
+configure terminal
+interface fastethernet 0/24
+switchport mode access
+switchport access vlan 11
+end
+
+show vlan brief
+
+configure terminal
+interface fastethernet 0/1
+switchport mode access
+switchport access vlan 11
+end
+
+show vlan brief

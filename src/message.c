@@ -73,7 +73,7 @@ int parse_pasv_reply(char *msg, char *out_reply) {
     int a = -1;
     int b = -1;
     strtok(buf, "(,)");
-    strncat(ip, strtok(NULL, "(,)"), 3);
+    strncpy(ip, strtok(NULL, "(,)"), 3);
     for (int i = 0; i < 3; i++) {
         strncat(ip, ".", 2);
         strncat(ip, strtok(NULL, "(,)"), 3);
