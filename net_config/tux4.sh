@@ -15,10 +15,5 @@ ip addr add 172.16.11.253/24 dev eth1
 echo 1 > /proc/sys/net/ipv4/ip_forward
 echo 0 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
 
-ip addr show
-
-ip route show
-
 ip -family inet neigh flush any
-
 ip route add default via 172.16.11.254
